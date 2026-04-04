@@ -1,60 +1,85 @@
-# 🤖 Slack Emoji Engine
+# 🤖 Slack Emoji Pipeline
 
-A professional-grade, 3-stage pipeline for transforming raw images into high-quality, optimized Slack emojis. This engine is designed to bypass Slack's hidden complexity limits while maintaining pixel-perfect visual integrity.
+![Python Version](https://img.shields.io/badge/python-3.12%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Build](https://img.shields.io/badge/build-passing-brightgreen)
+![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
 
-## 🏗️ Core Philosophy: Total Collection Integrity
-**All emojis intended for the workspace should be added to this pipeline.** This ensures that every asset—whether a simple logo or a complex 137-frame animation—is standardized for dimensions, transparency, and file-size compliance.
+A professional, 3-stage automated pipeline for transforming raw image assets into high-fidelity Slack emojis. This engine automatically resolves common quality regressions including jittery animations, jagged transparency, and incorrect aspect ratios.
+
+---
+
+## 🏗️ Core Philosophy: Collection Integrity
+To maintain a high-quality Slack workspace, **all emojis must be processed through this pipeline.** The engine ensures every asset complies with Slack's internal rendering constraints and complexity limits.
 
 ---
 
 ## 🛠️ The 3-Stage Pipeline
 
-### **Stage 1: Sanitise (`1_sanitise.py`)**
-The "Factory" stage. It handles the heavy mathematical lifting:
-*   **Flood-Fill Transparency:** Corner-seeded algorithm that removes backgrounds while protecting internal white content (e.g., logos).
-*   **Global Bounding Box:** Union-based cropping across all frames to eliminate animation jitter.
-*   **Canvas Squaring:** Automatic transparent padding to 1:1 ratio to prevent "tiny" emoji rendering.
-*   **Frame Decimation:** Intelligent frame-dropping to stay under Slack's 50-frame limit.
+### **Stage 1: Sanitization** (`sanitizer.py`)
+**Intake:** Place your raw source files (PNG, JPG, GIF, WebP) into the `/emojis` directory.
+- **Action:** The factory engine crops "empty air," pads images to perfect 1:1 squares, and applies corner-seeded flood-fill transparency.
+- **Optimization:** Automatically decimates frames in oversized GIFs to bypass Slack's hidden 50-frame limit.
 
-### **Stage 2: Rename (`2_rename.py`)**
-The "Identity" stage. An interactive CLI wizard:
-*   **Visual Previews:** Automatically opens assets in macOS Preview for identification.
-*   **Dynamic Namespacing:** Wraps names in configurable Prefixes/Suffixes (defined in `.env`).
-*   **Collision Guard:** Prevents accidental overwrites of existing assets.
+### **Stage 2: Identification** (`renamer.py`)
+- **Action:** An interactive CLI wizard that pops open every sanitized asset in macOS Preview for visual identification.
+- **Namespacing:** Automatically applies your custom `{PREFIX}{name}{SUFFIX}` (e.g., `cy_...`) defined in your environment.
 
-### **Stage 3: Upload (`3_upload_playwright.py`)**
-The "Deployment" stage. A high-stability Playwright robot:
-*   **API Guard:** Queries the Slack workspace first to skip existing duplicates.
-*   **Honest Verification:** Confirms UI state before logging success to prevent "Ghost Uploads."
-*   **Single-Tab Mandate:** Aggressively manages browser tabs for stability.
+### **Stage 3: Deployment** (`uploader.py`)
+- **Action:** A Playwright-based robot that takes control of a persistent Brave browser profile to perform the manual upload work.
+- **API Guard:** Queries the Slack workspace before every action to skip duplicates and verify server-side success.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
-1. **Setup Environment:**
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   playwright install chromium
-   ```
+### **1. Setup Environment**
+This project uses [**uv**](https://github.com/astral-sh/uv) for ultra-fast, modern Python management.
+```bash
+# Install dependencies and setup venv
+uv sync
+# Install browser binaries
+uv run playwright install chromium
+```
 
-2. **Configure `.env`:**
-   Copy `.env.example` to `.env` and set your `SLACK_WORKSPACE` and `NAMESPACE_PREFIX`.
+### **2. Prepare Your Emojis**
+Create the intake folder and drop your raw files inside:
+```bash
+mkdir emojis
+# [Action] Drop your raw PNG/GIF/WebP files into /emojis
+```
 
-3. **Execution:**
-   ```bash
-   # Stage 1
-   python3 1_sanitise.py
-   # Stage 2
-   python3 2_rename.py
-   # Stage 3
-   python3 3_upload_playwright.py
-   ```
+### **3. Configuration**
+Copy the environment template and set your Slack workspace domain:
+```bash
+cp .env.example .env
+# Edit .env to set SLACK_WORKSPACE and NAMESPACE_PREFIX
+```
+
+### **4. Run the Pipeline**
+```bash
+uv run sanitizer.py
+uv run renamer.py
+uv run uploader.py
+```
+
+---
 
 ## 🧪 Testing
-The engine includes a full suite of logic tests. To verify the engine state:
+To verify the engine logic:
 ```bash
-python3 -m unittest discover tests
+uv run python -m unittest discover tests
 ```
+
+---
+
+## 📂 Project Structure
+- `/emojis`: **[INTAKE]** Your raw, unprocessed source files.
+- `/emojis_ready`: **[WORK]** Sanitized files waiting for a human name.
+- `/emojis_named`: **[DEPLOY]** Final assets ready for Slack upload.
+- `/notes`: **[DOCS]** Full engineering journals and forensic reports.
+
+---
+
+## ⚖️ License
+Distributed under the MIT License. See `LICENSE` for more information.
