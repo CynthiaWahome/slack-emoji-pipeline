@@ -1,60 +1,67 @@
-# 🤖 Slack Emoji Engine
+# Slack Emoji Pipeline
 
-A professional-grade, 3-stage pipeline for transforming raw images into high-quality, optimized Slack emojis. This engine is designed to bypass Slack's hidden complexity limits while maintaining pixel-perfect visual integrity.
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![Playwright](https://img.shields.io/badge/Playwright-45ba4b?style=for-the-badge&logo=Playwright&logoColor=white)
+![Pillow](https://img.shields.io/badge/Pillow-11557c?style=for-the-badge&logo=Python&logoColor=white)
+![uv](https://img.shields.io/badge/uv-000000?style=for-the-badge&logo=rust&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 
-## 🏗️ Core Philosophy: Total Collection Integrity
-**All emojis intended for the workspace should be added to this pipeline.** This ensures that every asset—whether a simple logo or a complex 137-frame animation—is standardized for dimensions, transparency, and file-size compliance.
-
----
-
-## 🛠️ The 3-Stage Pipeline
-
-### **Stage 1: Sanitise (`1_sanitise.py`)**
-The "Factory" stage. It handles the heavy mathematical lifting:
-*   **Flood-Fill Transparency:** Corner-seeded algorithm that removes backgrounds while protecting internal white content (e.g., logos).
-*   **Global Bounding Box:** Union-based cropping across all frames to eliminate animation jitter.
-*   **Canvas Squaring:** Automatic transparent padding to 1:1 ratio to prevent "tiny" emoji rendering.
-*   **Frame Decimation:** Intelligent frame-dropping to stay under Slack's 50-frame limit.
-
-### **Stage 2: Rename (`2_rename.py`)**
-The "Identity" stage. An interactive CLI wizard:
-*   **Visual Previews:** Automatically opens assets in macOS Preview for identification.
-*   **Dynamic Namespacing:** Wraps names in configurable Prefixes/Suffixes (defined in `.env`).
-*   **Collision Guard:** Prevents accidental overwrites of existing assets.
-
-### **Stage 3: Upload (`3_upload_playwright.py`)**
-The "Deployment" stage. A high-stability Playwright robot:
-*   **API Guard:** Queries the Slack workspace first to skip existing duplicates.
-*   **Honest Verification:** Confirms UI state before logging success to prevent "Ghost Uploads."
-*   **Single-Tab Mandate:** Aggressively manages browser tabs for stability.
+An automated 3-stage pipeline for transforming raw assets into production-grade Slack emojis. Resolves common regressions in transparency, aspect ratio, and GIF complexity.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Setup and Installation
 
-1. **Setup Environment:**
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   playwright install chromium
-   ```
-
-2. **Configure `.env`:**
-   Copy `.env.example` to `.env` and set your `SLACK_WORKSPACE` and `NAMESPACE_PREFIX`.
-
-3. **Execution:**
-   ```bash
-   # Stage 1
-   python3 1_sanitise.py
-   # Stage 2
-   python3 2_rename.py
-   # Stage 3
-   python3 3_upload_playwright.py
-   ```
-
-## 🧪 Testing
-The engine includes a full suite of logic tests. To verify the engine state:
+### 1. Environment Configuration
+This project utilizes [uv](https://github.com/astral-sh/uv) for modern, high-performance Python package management.
 ```bash
-python3 -m unittest discover tests
+# Clone the repository
+git clone <your-url>
+cd slack-emoji-pipeline
+
+# Sync environment and install browser binaries
+uv sync
+uv run playwright install chromium
 ```
+
+### 2. Configure Your Environment
+Copy the template and define your workspace variables:
+```bash
+cp .env.example .env
+```
+
+---
+
+## 🛠️ The Pipeline Workflow
+
+### Phase 1: Intake & Sanitization
+Place raw image files (PNG, JPG, GIF, WebP) into the `/emojis` directory.
+```bash
+mkdir emojis
+uv run sanitizer.py
+```
+
+### Phase 2: Identification & Naming
+Execute the interactive wizard to identify and namespace your sanitized assets.
+```bash
+uv run renamer.py
+```
+
+### Phase 3: Deployment
+Automate the mass-upload to your configured Slack workspace.
+```bash
+uv run uploader.py
+```
+
+---
+
+## 🧪 Logic Verification
+Execute logic verification tests to ensure the engine state is healthy:
+```bash
+uv run python -m unittest discover tests
+```
+
+---
+
+## ⚖️ License
+Distributed under the MIT License. See `LICENSE` for details.

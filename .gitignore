@@ -1,11 +1,19 @@
+# Environment and Virtual Environments
 .env
 .venv/
 __pycache__/
 *.log
+
+# Playwright
 browser_session/
+
+# [CRITICAL] Emoji Assets (Local only, never push to GitHub)
+emojis/
 emojis_ready/
 emojis_named/
-emojis_review/
 emojis_excluded/
+emojis_review/
+
+# Test Sandboxes
 test_sandbox/
 test_renamer_sandbox/
