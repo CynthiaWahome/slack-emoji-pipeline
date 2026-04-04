@@ -6,13 +6,13 @@
 ![uv](https://img.shields.io/badge/uv-000000?style=for-the-badge&logo=rust&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 
-An automated 3-stage pipeline for transforming raw assets into production-grade Slack emojis. Resolves common regressions in transparency, aspect ratio, and GIF complexity.
+A simple tool to standardize your entire emoji collection and transform raw images and GIFs into perfect Slack emojis. This engine automatically fixes common problems like blurry backgrounds, tiny icons, and GIFs that are too large to upload—ensuring every emoji fits Slack's requirements perfectly.
 
 ---
 
-## 🚀 Setup and Installation
+## 🚀 Getting Started
 
-### 1. Environment Configuration
+### 1. Environment Setup
 This project utilizes [uv](https://github.com/astral-sh/uv) for modern, high-performance Python package management.
 ```bash
 # Clone the repository
@@ -24,34 +24,39 @@ uv sync
 uv run playwright install chromium
 ```
 
-### 2. Configure Your Environment
+### 2. Prepare Your Emojis (Required)
+**Crucial:** Create an `/emojis` directory in the root and place all your raw images/GIFs inside. The pipeline depends on this folder to start the process.
+```bash
+mkdir emojis
+# [Action] Place raw image files into the /emojis directory
+```
+
+### 3. Configure Your Environment
 Copy the template and define your workspace variables:
 ```bash
 cp .env.example .env
+# [Action] Edit .env to set SLACK_WORKSPACE and NAMESPACE_PREFIX
 ```
 
 ---
 
 ## 🛠️ The Pipeline Workflow
 
-### Phase 1: Intake & Sanitization
-Place raw image files (PNG, JPG, GIF, WebP) into the `/emojis` directory.
-```bash
-mkdir emojis
-uv run sanitizer.py
-```
+Execute the stages in order. Stage 2 is optional if your files are already named.
 
-### Phase 2: Identification & Naming
-Execute the interactive wizard to identify and namespace your sanitized assets.
-```bash
-uv run renamer.py
-```
+| Stage | Command | Input Folder | Output Folder |
+| :--- | :--- | :--- | :--- |
+| **1. Sanitise** | `uv run src/slack_emoji_pipeline/sanitizer.py` | `/emojis` | `/emojis_ready` |
+| **2. Rename** | `uv run src/slack_emoji_pipeline/renamer.py` | `/emojis_ready` | `/emojis_named` |
+| **3. Deploy** | `uv run src/slack_emoji_pipeline/uploader.py` | `/emojis_named` | Slack |
 
-### Phase 3: Deployment
-Automate the mass-upload to your configured Slack workspace.
-```bash
-uv run uploader.py
-```
+> 🏗️ **The Namespace Principle:** We recommend using a consistent prefix (e.g., `acme_`) during Stage 2. This prevents name collisions and allows for surgical mass-deletion if you ever need to reset your library.
+
+---
+
+## Additional Tools
+
+> 💡 **Lightweight Alternative:** For browser-based management without the full Python pipeline, see the [Slack Emoji Toolkit Gist](https://gist.github.com/CynthiaWahome/7cef9951dd0cb7ed3caaf0e63d7774a7) for workspace-aware bulk uploading and surgical mass deletion via the console.
 
 ---
 
