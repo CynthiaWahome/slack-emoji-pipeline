@@ -16,7 +16,7 @@ An automated 3-stage pipeline for transforming raw assets into production-grade 
 This project utilizes [uv](https://github.com/astral-sh/uv) for modern, high-performance Python package management.
 ```bash
 # Clone the repository
-git clone <your-url>
+git clone https://github.com/CynthiaWahome/slack-emoji-pipeline.git
 cd slack-emoji-pipeline
 
 # Sync environment and install browser binaries
