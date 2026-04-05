@@ -315,7 +315,7 @@ def run() -> tuple[int, int]:
 
         # Detect animation from metadata — NOT from file extension.
         # Checking extension misses animated WebPs (the source of the
-        # "Batman went static" bug in earlier versions).
+        # "Batman went static" in earlier versions).
         is_animated = False
         try:
             with Image.open(filepath) as img:
