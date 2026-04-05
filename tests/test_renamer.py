@@ -4,9 +4,10 @@ import shutil
 from pathlib import Path
 import importlib.util
 
-# Load the renamer
+# Load the renamer from the new src layout
 BASE_DIR = Path(__file__).parent.parent
-spec = importlib.util.spec_from_file_location("renamer", str(BASE_DIR / "2_rename.py"))
+SRC_PATH = BASE_DIR / "src" / "slack_emoji_pipeline" / "renamer.py"
+spec = importlib.util.spec_from_file_location("renamer", str(SRC_PATH))
 renamer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(renamer)
 
@@ -22,8 +23,8 @@ class TestRenamerLogic(unittest.TestCase):
         # Point script to sandbox
         renamer.READY_DIR = self.ready_dir
         renamer.NAMED_DIR = self.named_dir
-        renamer.PREFIX = "cy_"
-        renamer.SUFFIX = ""
+        renamer.NAMESPACE_PREFIX = "cy_"
+        renamer.NAMESPACE_SUFFIX = ""
 
     def tearDown(self):
         if self.test_root.exists():
@@ -31,17 +32,12 @@ class TestRenamerLogic(unittest.TestCase):
 
     def test_namespace_prefix_application(self):
         """Verify prefix is added correctly and not doubled."""
-        # Case 1: Simple name
         self.assertEqual(renamer.apply_namespace("smile", ".png"), "cy_smile.png")
-        # Case 2: Already has prefix (Should not double)
         self.assertEqual(renamer.apply_namespace("cy_smile", ".png"), "cy_smile.png")
 
     def test_collision_guard(self):
         """Verify the renamer detects existing files."""
-        # Create an existing file
         (self.named_dir / "cy_smile.png").touch()
-        
-        # Test the list of existing names
         existing = {f.name for f in self.named_dir.iterdir()}
         self.assertIn("cy_smile.png", existing)
 
