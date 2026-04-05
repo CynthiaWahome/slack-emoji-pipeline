@@ -1,22 +1,23 @@
 # Slack Emoji Pipeline
 
+![Slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 ![Playwright](https://img.shields.io/badge/Playwright-45ba4b?style=for-the-badge&logo=Playwright&logoColor=white)
 ![Pillow](https://img.shields.io/badge/Pillow-11557c?style=for-the-badge&logo=Python&logoColor=white)
 ![uv](https://img.shields.io/badge/uv-000000?style=for-the-badge&logo=rust&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 
-An automated 3-stage pipeline for transforming raw assets into production-grade Slack emojis. Resolves common regressions in transparency, aspect ratio, and GIF complexity.
+The ultimate tool for perfect Slack emojis. Transform raw images and GIFs into professional assets while automatically bypassing Slack's hidden size and frame limits.
 
 ---
 
-## 🚀 Setup and Installation
+## Getting Started
 
-### 1. Environment Configuration
+### 1. Environment Setup
 This project utilizes [uv](https://github.com/astral-sh/uv) for modern, high-performance Python package management.
 ```bash
 # Clone the repository
-git clone <your-url>
+git clone https://github.com/CynthiaWahome/slack-emoji-pipeline.git
 cd slack-emoji-pipeline
 
 # Sync environment and install browser binaries
@@ -24,38 +25,43 @@ uv sync
 uv run playwright install chromium
 ```
 
-### 2. Configure Your Environment
+### 2. Prepare Your Emojis (Required)
+Create an `/emojis` directory in the root and place all your raw images/GIFs inside.
+```bash
+mkdir emojis
+# [Action] Place raw image files into the /emojis directory
+```
+
+### 3. Configure Your Environment
 Copy the template and define your workspace variables:
 ```bash
 cp .env.example .env
+# [Action] Edit .env to set SLACK_WORKSPACE and NAMESPACE_PREFIX
 ```
 
 ---
 
-## 🛠️ The Pipeline Workflow
+## The Pipeline Workflow
 
-### Phase 1: Intake & Sanitization
-Place raw image files (PNG, JPG, GIF, WebP) into the `/emojis` directory.
-```bash
-mkdir emojis
-uv run sanitizer.py
-```
+Execute the stages in order. Stage 2 is optional if your files are already named.
 
-### Phase 2: Identification & Naming
-Execute the interactive wizard to identify and namespace your sanitized assets.
-```bash
-uv run renamer.py
-```
+| Stage | Command | Input Folder | Output Folder |
+| :--- | :--- | :--- | :--- |
+| **1. Sanitise** | `uv run src/sanitizer.py` | `/emojis` | `/emojis_ready` |
+| **2. Rename** | `uv run src/renamer.py` | `/emojis_ready` | `/emojis_named` |
+| **3. Deploy** | `uv run src/uploader.py` | `/emojis_named` | Slack |
 
-### Phase 3: Deployment
-Automate the mass-upload to your configured Slack workspace.
-```bash
-uv run uploader.py
-```
+> 🏗️ **The Namespace Principle:** We recommend using a consistent prefix (e.g., `acme_`) during Stage 2. This prevents name collisions and allows for surgical mass-deletion if you ever need to reset your library.
 
 ---
 
-## 🧪 Logic Verification
+## Additional Tools
+
+> 💡 **Lightweight Alternative:** For browser-based management without the full Python pipeline, see the [Slack Emoji Toolkit Gist](https://gist.github.com/CynthiaWahome/7cef9951dd0cb7ed3caaf0e63d7774a7) for workspace-aware bulk uploading and surgical mass deletion via the console.
+
+---
+
+## Logic Verification
 Execute logic verification tests to ensure the engine state is healthy:
 ```bash
 uv run python -m unittest discover tests
@@ -63,5 +69,5 @@ uv run python -m unittest discover tests
 
 ---
 
-## ⚖️ License
-Distributed under the MIT License. See `LICENSE` for details.
+## License
+Distributed under the MIT License. See [LICENSE](LICENSE) for details.

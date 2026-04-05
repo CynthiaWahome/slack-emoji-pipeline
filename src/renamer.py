@@ -1,12 +1,13 @@
 """Interactive Emoji Rename Wizard.
 
 This module provides a command-line interface for identifying and naming
-sanitized emoji assets. It features visual previews, namespace management,
-collision protection, and a persistent skip-queue.
+sanitized emoji assets. It features cross-platform visual previews,
+namespace management (Prefix, Middle, Suffix), and collision protection.
 """
 
 import logging
 import os
+import platform
 import subprocess
 from pathlib import Path
 
@@ -17,7 +18,9 @@ load_dotenv()
 
 # Configuration Constants
 NAMESPACE_PREFIX = os.getenv("NAMESPACE_PREFIX", "").strip()
+NAMESPACE_MIDDLE = os.getenv("NAMESPACE_MIDDLE", "").strip()
 NAMESPACE_SUFFIX = os.getenv("NAMESPACE_SUFFIX", "").strip()
+
 READY_DIR = Path("emojis_ready")
 NAMED_DIR = Path("emojis_named")
 EXCLUDED_DIR = Path("emojis_excluded")
@@ -27,10 +30,6 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%H:%M:%S",
-    handlers=[
-        logging.FileHandler("rename_log.txt", mode="a", encoding="utf-8"),
-        logging.StreamHandler(),
-    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -38,9 +37,8 @@ logger = logging.getLogger(__name__)
 def apply_namespace(base_name: str, extension: str) -> str:
     """Wraps a human-readable name in the configured namespace.
 
-    This method ensures that the name is lowercase, uses underscores for
-    spaces, and correctly applies the configured prefix and suffix without
-    duplication.
+    Ensures that the name follows the pattern: {PREFIX}{BASE_NAME}{MIDDLE}{SUFFIX}.
+    Forces lowercase and replaces spaces with underscores.
 
     Args:
         base_name (str): The raw name entered by the user.
@@ -51,27 +49,49 @@ def apply_namespace(base_name: str, extension: str) -> str:
     """
     name = base_name.strip().lower().replace(" ", "_")
 
-    # Prefix wrap (avoid duplication)
+    # 1. Prefix wrap
     if NAMESPACE_PREFIX and not name.startswith(NAMESPACE_PREFIX):
         name = f"{NAMESPACE_PREFIX}{name}"
 
-    # Suffix wrap (avoid duplication)
+    # 2. Middle injection
+    if NAMESPACE_MIDDLE and NAMESPACE_MIDDLE not in name:
+        name = f"{name}{NAMESPACE_MIDDLE}"
+
+    # 3. Suffix wrap
     if NAMESPACE_SUFFIX and not name.endswith(NAMESPACE_SUFFIX):
         name = f"{name}{NAMESPACE_SUFFIX}"
 
     return f"{name}{extension}"
 
 
-def run_rename_wizard():
+def open_file_cross_platform(filepath: Path):
+    """Opens an image file using the system's default viewer.
+
+    Args:
+        filepath (Path): The path to the file to open.
+    """
+    system = platform.system()
+    try:
+        if system == "Darwin":  # macOS
+            subprocess.run(["open", str(filepath)], check=False)
+        elif system == "Windows":  # Windows
+            os.startfile(str(filepath))
+        else:  # Linux/Other
+            subprocess.run(["xdg-open", str(filepath)], check=False)
+    except Exception as err:
+        logger.warning("   ⚠️ Could not open preview: %s", err)
+
+
+def run():
     """Starts the interactive CLI session for naming emojis.
 
-    Loops through all files in the 'ready' directory, opening previews and
-    handling human input via an If/Elif/Else logic gate.
+    Loops through all files in 'emojis_ready', opening previews and
+    handling human input until the queue is empty.
     """
-    logger.info("🧙‍♂️ Launching Zero-Loss Master Wizard...")
+    logger.info("🧙‍♂️ Launching Interactive Rename Wizard...")
 
     if not READY_DIR.exists():
-        logger.error("❌ Input folder '%s' missing! Run Stage 1 first.", READY_DIR)
+        logger.error("❌ Input folder '%s' missing!", READY_DIR)
         return
 
     NAMED_DIR.mkdir(exist_ok=True)
@@ -91,7 +111,7 @@ def run_rename_wizard():
             logger.info("✨ MISSION COMPLETE! All emojis processed.")
             break
 
-        logger.info("📁 Queue: %d emojis remaining.", len(files))
+        logger.info("📁 Current Queue: %d emojis remaining.", len(files))
         existing_names = {f.name for f in NAMED_DIR.iterdir() if f.is_file()}
 
         print("═" * 60)
@@ -102,64 +122,43 @@ def run_rename_wizard():
 
         for filepath in files:
             logger.info("📦 Identifying: %s", filepath.name)
-            try:
-                subprocess.run(["open", str(filepath)], check=False)
-            except Exception as err:
-                logger.warning("   ⚠️ Could not open preview: %s", err)
+            open_file_cross_platform(filepath)
 
             while True:
                 user_input = input("   ↳ Enter name (or s/x/q): ").strip().lower()
 
-                # IF: QUIT
                 if user_input == "q":
-                    logger.info("🛑 Session ended by user. Progress saved.")
+                    logger.info("🛑 Session ended by user.")
                     return
-
-                # ELIF: SKIP (Move to back of the queue)
-                elif user_input == "s" or not user_input:
+                elif user_input in ("s", ""):
                     logger.info("   ⏭️  Skipping to next round.")
                     skipped_this_round += 1
                     break
-
-                # ELIF: EXCLUDE (Surgical removal to Vault)
                 elif user_input in ("x", "exclude", "ignore"):
-                    try:
-                        os.replace(filepath, EXCLUDED_DIR / filepath.name)
-                        logger.info("   🛡️  MOVED TO VAULT: %s", filepath.name)
-                    except Exception as err:
-                        logger.error("   ❌ Vault error: %s", err)
+                    os.replace(filepath, EXCLUDED_DIR / filepath.name)
+                    logger.info("   🛡️  MOVED TO VAULT: %s", filepath.name)
                     break
-
-                # ELSE: PROCESS RENAME
                 else:
                     final_name = apply_namespace(user_input, filepath.suffix)
-
                     if final_name in existing_names:
-                        logger.error(
-                            "   ❌ COLLISION: '%s' exists. Try again.", final_name
-                        )
+                        logger.error("   ❌ COLLISION: '%s' exists.", final_name)
                         continue
-
                     try:
                         os.replace(filepath, NAMED_DIR / final_name)
                         existing_names.add(final_name)
                         logger.info("   ✅ Saved as: :%s:", final_name.split(".")[0])
                         break
                     except Exception as err:
-                        logger.error("   ❌ System Error: %s", err)
+                        logger.error("   ❌ Error: %s", err)
                         break
 
-        # Check if we finished a pass without skipping
         if skipped_this_round == 0:
             break
         else:
-            logger.info(
-                "🔄 Round finished. %d emojis still need names. Looping back...",
-                skipped_this_round,
-            )
+            logger.info("🔄 Round finished. Looping back...")
 
-    logger.info("🏁 Wizard session complete.")
+    logger.info("🏁 Wizard complete.")
 
 
 if __name__ == "__main__":
-    run_rename_wizard()
+    run()

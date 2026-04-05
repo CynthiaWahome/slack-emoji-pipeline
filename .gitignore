@@ -1,19 +1,39 @@
-# Environment and Virtual Environments
-.env
-.venv/
+# Python
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.pytest_cache/
+.uv/
+
+# Environment & Config
+.env
+.env.backup
+
+# Logs
 *.log
+*_log.txt
+upload_progress.txt
 
-# Playwright
-browser_session/
-
-# [CRITICAL] Emoji Assets (Local only, never push to GitHub)
+# [CRITICAL] Emoji Assets (Local Only)
 emojis/
 emojis_ready/
 emojis_named/
 emojis_excluded/
 emojis_review/
-
-# Test Sandboxes
 test_sandbox/
 test_renamer_sandbox/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
