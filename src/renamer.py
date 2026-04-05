@@ -1,8 +1,8 @@
 """Interactive Emoji Rename Wizard.
 
 This module provides a command-line interface for identifying and naming
-sanitized emoji assets. It features cross-platform visual previews, 
-namespace management, and a persistent skip-queue.
+sanitized emoji assets. It features cross-platform visual previews,
+namespace management (Prefix, Middle, Suffix), and collision protection.
 """
 
 import logging
@@ -30,13 +30,46 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%H:%M:%S",
-    handlers=[logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
 
 
+def apply_namespace(base_name: str, extension: str) -> str:
+    """Wraps a human-readable name in the configured namespace.
+
+    Ensures that the name follows the pattern: {PREFIX}{BASE_NAME}{MIDDLE}{SUFFIX}.
+    Forces lowercase and replaces spaces with underscores.
+
+    Args:
+        base_name (str): The raw name entered by the user.
+        extension (str): The file extension (e.g., '.png').
+
+    Returns:
+        str: The fully namespaced filename.
+    """
+    name = base_name.strip().lower().replace(" ", "_")
+
+    # 1. Prefix wrap
+    if NAMESPACE_PREFIX and not name.startswith(NAMESPACE_PREFIX):
+        name = f"{NAMESPACE_PREFIX}{name}"
+
+    # 2. Middle injection
+    if NAMESPACE_MIDDLE and NAMESPACE_MIDDLE not in name:
+        name = f"{name}{NAMESPACE_MIDDLE}"
+
+    # 3. Suffix wrap
+    if NAMESPACE_SUFFIX and not name.endswith(NAMESPACE_SUFFIX):
+        name = f"{name}{NAMESPACE_SUFFIX}"
+
+    return f"{name}{extension}"
+
+
 def open_file_cross_platform(filepath: Path):
-    """Opens a file using the system's default viewer (Mac, Windows, or Linux)."""
+    """Opens an image file using the system's default viewer.
+
+    Args:
+        filepath (Path): The path to the file to open.
+    """
     system = platform.system()
     try:
         if system == "Darwin":  # macOS
@@ -49,21 +82,13 @@ def open_file_cross_platform(filepath: Path):
         logger.warning("   ⚠️ Could not open preview: %s", err)
 
 
-def apply_namespace(base_name: str, extension: str) -> str:
-    """Wraps a human-readable name in the configured namespace."""
-    name = base_name.strip().lower().replace(" ", "_")
-    if NAMESPACE_PREFIX and not name.startswith(NAMESPACE_PREFIX):
-        name = f"{NAMESPACE_PREFIX}{name}"
-    if NAMESPACE_MIDDLE and NAMESPACE_MIDDLE not in name:
-        name = f"{name}{NAMESPACE_MIDDLE}"
-    if NAMESPACE_SUFFIX and not name.endswith(NAMESPACE_SUFFIX):
-        name = f"{name}{NAMESPACE_SUFFIX}"
-    return f"{name}{extension}"
+def run():
+    """Starts the interactive CLI session for naming emojis.
 
-
-def run_rename_wizard():
-    """Starts the interactive CLI session for naming emojis."""
-    logger.info("🧙‍♂️ Launching Cross-Platform Rename Wizard...")
+    Loops through all files in 'emojis_ready', opening previews and
+    handling human input until the queue is empty.
+    """
+    logger.info("🧙‍♂️ Launching Interactive Rename Wizard...")
 
     if not READY_DIR.exists():
         logger.error("❌ Input folder '%s' missing!", READY_DIR)
@@ -73,12 +98,20 @@ def run_rename_wizard():
     EXCLUDED_DIR.mkdir(exist_ok=True)
 
     while True:
-        files = sorted([f for f in READY_DIR.iterdir() if f.is_file() and not f.name.startswith(".")])
+        # Fetch fresh list of remaining assets
+        files = sorted(
+            [
+                f
+                for f in READY_DIR.iterdir()
+                if f.is_file() and not f.name.startswith(".")
+            ]
+        )
+
         if not files:
-            logger.info("✨ Everything is already named!")
+            logger.info("✨ MISSION COMPLETE! All emojis processed.")
             break
 
-        logger.info("📁 Queue: %d emojis remaining.", len(files))
+        logger.info("📁 Current Queue: %d emojis remaining.", len(files))
         existing_names = {f.name for f in NAMED_DIR.iterdir() if f.is_file()}
 
         print("═" * 60)
@@ -95,9 +128,9 @@ def run_rename_wizard():
                 user_input = input("   ↳ Enter name (or s/x/q): ").strip().lower()
 
                 if user_input == "q":
-                    logger.info("🛑 Session ended.")
+                    logger.info("🛑 Session ended by user.")
                     return
-                elif user_input == "s" or not user_input:
+                elif user_input in ("s", ""):
                     logger.info("   ⏭️  Skipping to next round.")
                     skipped_this_round += 1
                     break
@@ -119,10 +152,13 @@ def run_rename_wizard():
                         logger.error("   ❌ Error: %s", err)
                         break
 
-        if skipped_this_round == 0: break
-        else: logger.info("🔄 Round finished. Looping back...")
+        if skipped_this_round == 0:
+            break
+        else:
+            logger.info("🔄 Round finished. Looping back...")
 
     logger.info("🏁 Wizard complete.")
 
+
 if __name__ == "__main__":
-    run_rename_wizard()
+    run()
