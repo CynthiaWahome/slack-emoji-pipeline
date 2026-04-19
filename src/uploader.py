@@ -142,14 +142,20 @@ async def execute_upload():
         profile_path = _find_profile_dir()
 
         logger.info("🚀 Launching robot (Path: %s)", browser_path or "Default")
-        context = await pw.chromium.launch_persistent_context(
-            user_data_dir=profile_path,
-            executable_path=browser_path or None,
-            headless=False,
-            slow_mo=200,
-            ignore_default_args=["--enable-automation"],
-            args=["--disable-blink-features=AutomationControlled"],
-        )
+        logger.info("📁 Profile: %s", profile_path)
+        
+        try:
+            context = await pw.chromium.launch_persistent_context(
+                user_data_dir=profile_path,
+                executable_path=browser_path or None,
+                headless=False,
+                slow_mo=200,
+                ignore_default_args=["--enable-automation"],
+                args=["--disable-blink-features=AutomationControlled"],
+            )
+        except Exception as e:
+            logger.error("❌ Failed to launch browser: %s", e)
+            return
 
         page = context.pages[0]
         for p in context.pages[1:]:
@@ -174,31 +180,51 @@ async def execute_upload():
 
             logger.info("[%d/%d] Uploading :%s:", i + 1, len(targets), name)
             try:
+                # 1. Clear any existing state
                 await page.keyboard.press("Escape")
-                add_btn = page.locator(
-                    "[data-qa='customize_emoji_add_button']"
-                ).first
-                await add_btn.wait_for(state="visible", timeout=5000)
-                await add_btn.click(force=True)
+                await page.wait_for_timeout(500)
 
-                await page.locator("input[type='file']").first.set_input_files(
-                    str(filepath.resolve())
-                )
-                await page.locator(
-                    "[data-qa='customize_emoji_name_input']"
-                ).first.fill(name)
+                # 2. Open Modal
+                # Try data-qa first, then generic button text
+                add_btn = page.locator("[data-qa='customize_emoji_add_button'], button:has-text('Add Custom Emoji')").first
+                await add_btn.wait_for(state="visible", timeout=10000)
+                await add_btn.click()
+                logger.info("   ↳ Add button clicked")
 
-                save_btn = page.locator(
-                    "[data-qa='customize_emoji_save_button']"
-                ).first
-                await save_btn.click()
+                # 3. Wait for Modal and Find Input
+                # We look for the textbox labeled "Name" or with the specific data-qa
+                name_input = page.locator("input[name='name'], [data-qa='customize_emoji_name_input'], input[aria-label='Name']").first
+                await name_input.wait_for(state="visible", timeout=10000)
+                
+                # 4. Upload File
+                file_input = page.locator("input[type='file']").first
+                await file_input.set_input_files(str(filepath.resolve()))
+                logger.info("   ↳ File uploaded")
 
-                # Physical Verification
+                # 5. Fill Name
+                await name_input.fill(name)
+                logger.info("   ↳ Name filled")
+
+                # 6. Stability Pause
+                await page.wait_for_timeout(1000)
+
+                # 7. Click Save
+                # Try specific Save button locators
+                save_btn = page.locator("[data-qa='customize_emoji_save_button'], button:has-text('Save')").first
+                await save_btn.wait_for(state="visible", timeout=5000)
+                
+                logger.info("   ↳ Clicking Save...")
+                # We use dispatch_event to ensure the click is registered even if the UI is "busy"
+                await save_btn.click(force=True)
+
+                # 8. Verification
+                # We wait for the modal to disappear by checking for the Add button again
                 await add_btn.wait_for(state="visible", timeout=15000)
                 logger.info("   ✅ SUCCESS")
                 success_count += 1
-            except Exception:
-                logger.warning("   ❌ FAILED: %s", name)
+                
+            except Exception as e:
+                logger.warning("   ❌ FAILED: %s (%s)", name, str(e))
                 failed_emojis.append(name)
                 await page.keyboard.press("Escape")
 
